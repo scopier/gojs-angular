@@ -4,7 +4,7 @@ angular.module('cmdbApp')
                 restrict: 'E',
                 template: '<div></div>',
                 replace: true,
-                scope: { model: '=goModel' },
+                scope: { goModel: '=', goFunc: '=' },
                 link: function(scope, element, attrs) {
                     var draw = go.GraphObject.make;
                     var diagram = draw(
@@ -35,23 +35,17 @@ angular.module('cmdbApp')
 
                         }
                     );
-                    var overview = draw(
-                        go.Overview,
-                        "overview",
-                        {
-                            observed: diagram
-                        }
-                    );
-                    overview.box.elt(0).figure = "RoundedRectangle";
-                    overview.box.elt(0).stroke = "#53069B";
-                    overview.box.elt(0).strokeWidth = 4;
-                    scope.$watch("model", function(n) {
-                        var o = diagram.model;
-                        if (o !== n) {
-                          diagram.model = n;
+                    new go.Overview('diagram-overview').observed = diagram;
+
+                    scope.$watch("goModel", function(n) {
+                        if (n){
+                            diagram.model = go.Model.fromJson(n);
                         }
                       });
-
+                    var nodeDoubleClick = function(e, obj){
+                        var func = eval(scope.goFunc);
+                        new func(obj.part.data);
+                    };
                     diagram.nodeTemplate = draw(
                         go.Node,
                         new go.Binding("category", "serviceType"),
@@ -60,15 +54,18 @@ angular.module('cmdbApp')
                             selectionAdorned: false,
                             cursor: "pointer",
                             name: "NODE",
+                            doubleClick: function(e, obj){
+                                nodeDoubleClick(e, obj)
+                            }
                         },
                         draw(
                             go.Shape,
+                            new go.Binding('fill', 'status'),
                             {
                                 alignment: go.Spot.TopLeft,
                                 alignmentFocus: go.Spot.TopLeft,
                                 figure: "RoundedRectangle",
                                 stroke: "#C5C5C5",
-                                fill: "#ffffff",
                                 strokeWidth: 1,
                                 margin: 0,
                                 isPanelMain: true,
@@ -95,11 +92,25 @@ angular.module('cmdbApp')
                                     minSize: new go.Size(120, NaN)
                                 },
                                 draw(
+                                    go.TextBlock,
+                                    new go.Binding("text", "applicationName").makeTwoWay(),
+                                    {
+                                        alignment: go.Spot.BottomCenter,
+                                        alignmentFocus: go.Spot.BottomCenter,
+                                        name: "NODE_TEXT",
+                                        margin: 6,
+                                        stroke: "#000000",
+                                        font: "11pt avn85,bold,ng,dotum,AppleGothic,sans-serif",
+                                        editable: false
+                                    }
+                                ),
+                                draw(
                                     go.Picture,
                                     {
                                         margin: new go.Margin(18, 0, 5, 0),
                                         desiredSize: new go.Size(80, 40),
-                                        imageStretch: go.GraphObject.Uniform
+                                        imageStretch: go.GraphObject.Uniform,
+
                                     },
                                     new go.Binding("source", "serviceType", function(serviceType){
                                         return '/static/images/servermap/' + serviceType + '.png'
@@ -107,7 +118,7 @@ angular.module('cmdbApp')
                                 ),
                                 draw(
                                     go.TextBlock,
-                                    new go.Binding("text", "applicationName").makeTwoWay(),
+                                    new go.Binding("text", "agent").makeTwoWay(),
                                     {
                                         alignment: go.Spot.BottomCenter,
                                         alignmentFocus: go.Spot.BottomCenter,
@@ -136,7 +147,7 @@ angular.module('cmdbApp')
                                 name: "Link",
                                 isPanelMain: true,
                                 stroke: "#c5c5c5",
-                                strokeWidth: 1.5
+                                strokeWidth: 3
                             }
                         ),
                         draw(
@@ -146,7 +157,7 @@ angular.module('cmdbApp')
                                 toArrow: "standard",  // toArrow : kite, standard, OpenTriangle
                                 fill: "#C5C5C5",
                                 stroke: null,
-                                scale: 1.5
+                                scale: 2
                             }
                         ),
                         draw(
@@ -182,13 +193,14 @@ angular.module('cmdbApp')
                                         return val;
                                     }) ,
                                     new go.Binding("stroke", "hasAlert", function (hasAlert) {
-                                        return (hasAlert) ? "#FF1300" : "#000000";
+                                        return "#000000";
                                     })
 
                                 )
                             )
                         )
-                    )
+                    );
+
                 }
           }
     });
